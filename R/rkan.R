@@ -1,5 +1,5 @@
 #
-rkan <- function(x, y, lambda1, lambda2, k, beta0, w0, delta, maxIter){
+rkan <- function(x, y, lambda1, lambda2, k, beta0, w0, delta=1e-6, maxIter=1000){
   
   ## initialize
   n <- length(y)
@@ -17,13 +17,16 @@ rkan <- function(x, y, lambda1, lambda2, k, beta0, w0, delta, maxIter){
   dvec <- rep(0, 2*p+1)
   a <- diag(1,p)
   b <- rep(1,p)
-  Amat <- rbind(cbind(-a, a, b),cbind(a, a, b), cbind(0*a, a, 0*b))
-  
+  Amat <- rbind(cbind(-a, a, b),cbind(a, a, b))
+  cmax <- 100
+  l <- c(rep(-cmax,p),rep(0,p+1))
+  u <- rep(cmax,2*p+1)
+
   ## iteration
   for(l1 in 1:L1){ # for each lambda1
     for(l2 in 1:L2){ # for each lambda2
       for(l3 in 1:L3){ # for each K
-        dvec[(p+1):(2*p+1)] <- c(-lambda1[l1]*rep(1,p),k[l3])
+        dvec[(p+1):(2*p+1)] <- c(-lambda1[l1]*b,-k[l3])
         iter <- 0
         while(TRUE){
           iter <- iter + 1
@@ -34,17 +37,19 @@ rkan <- function(x, y, lambda1, lambda2, k, beta0, w0, delta, maxIter){
           ## prepare for quadprog
           Dmat[(1:p), (1:p)] <- 1/n * t(xx) %*% xx
           dvec[1:p] <- 1/n * t(xx) %*% yy
-          sol <- solve.QP(Dmat=Dmat, dvec=dvec, Amat=Amat)
-          betaTemp <- sol$solution
+          #sol <- solve.QP(Dmat=Dmat, dvec=dvec, Amat=t(Amat))
+          #betaTemp <- sol$solution[1:p]
+          sv <- ipop(c=-dvec,H=Dmat,A=Amat,b=rep(0,2*p),l=l,u=u,r=rep(cmax,2*p))
+          betaTemp <- primal(sv)[1:p]
           
           ## update w
-          rseq <- (y - t(x) %*% betaTemp)^2
+          rseq <- (y - x %*% betaTemp)^2
           wTemp <- ifelse(rseq > n * lambda2[l2], n * lambda2[l2]/rseq, 1)
           
           ## check convergency
           diff <- c(betaTemp - betaPre, wTemp - wPre)
-          betaPre <- betaTemp
-          wPre <- wTemp
+          betaPre <- as.vector(betaTemp)
+          wPre <- as.vector(wTemp)
           if(sum(diff^2)/(p+n) < delta || iter > maxIter){
             break
           }
@@ -54,4 +59,5 @@ rkan <- function(x, y, lambda1, lambda2, k, beta0, w0, delta, maxIter){
       }
     }
   }
+  list(beta=beta, w=w, iter=iter)
 }
