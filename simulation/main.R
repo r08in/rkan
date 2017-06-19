@@ -7,11 +7,19 @@ install.packages("Rcplex")
 library(Rcplex)
 
 set.seed(2017)
+# n <- 100
+# p <- 500
+# beta <- c(rep(1,10),rep(0,490))
 n <- 50
 p <- 8
-beta <- c(3, 2, 1, 0, 0, 0, 0, 0)
-dout <- GenerateDataByModel(n=n, beta=beta, model="C")
-res <- rkan(x=dout$x, y=dout$y, lambda1=0.1, lambda2=1, k=2, beta0=rep(0,p),w0=rep(1,n))
+beta <- c(3,2,1,0,0,0,0,0)
+dout <- GenerateDataByModel(n=n, beta=beta, model="B")
+ptm <- proc.time()
+res <- rkan(x=dout$x, y=dout$y, lambda1=0.42, lambda2=1, k=8, beta0=rep(0,p),w0=rep(1,n))
+as.vector(res$beta)
+as.vector(res$w)
+(proc.time() - ptm)[1]
+as.vector(res$w)
 
 
 m <- 500

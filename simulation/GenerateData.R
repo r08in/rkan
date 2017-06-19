@@ -236,7 +236,7 @@ GenerateDummyModel = function(sizeInfo, groupInfo, validGroupNumInfo, offSet = 0
 }
 
 # Data modification for different model
-GenerateDataByModel = function(n, beta, errorSigma = 2, r = 0.7, model = c("A", "B", "C", "D", "E"), 
+GenerateDataByModel = function(n, beta, errorSigma = 2, r = 0.5, model = c("A", "B", "C", "D", "E"), 
     dataType = c("Lasso", "Ridge"), pro = 0.1) {
     p = length(beta)
     if (model == "A") {

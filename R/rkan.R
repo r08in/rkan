@@ -18,7 +18,7 @@ rkan <- function(x, y, lambda1, lambda2, k, beta0, w0, delta=1e-6, maxIter=1000)
   a <- diag(1,p)
   b <- rep(1,p)
   Amat <- rbind(cbind(-a, a, b),cbind(a, a, b))
-  cmax <- 100
+  cmax <- 1000
   l <- c(rep(-cmax,p),rep(0,p+1))
   u <- rep(cmax,2*p+1)
 
