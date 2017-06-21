@@ -1,42 +1,16 @@
-#main
-install.packages("quadprog")
-require(quadprog)
+# single case
 require(kernlab)
 source("simulation/GenerateData.R")
-install.packages("Rcplex")
-library(Rcplex)
-
 set.seed(2017)
-# n <- 100
-# p <- 500
-# beta <- c(rep(1,10),rep(0,490))
-n <- 50
-p <- 8
-beta <- c(3,2,1,0,0,0,0,0)
-dout <- GenerateDataByModel(n=n, beta=beta, model="B")
+## Low dimension
+beta1 <- c(1, 0.5, 0, 0)
+beta2 <- c(1, -0.9, -1.3, -0.5)
+exam1 <- list(n=100, p=16, g=rep(4,4), beta=c(beta1,beta2,rep(0,8)))
+#exam1 <- list(n=10,g=rep(2,2), beta=c(1,2,0,0))
+exam <- exam1
+dout <- GenerateDataByModel(n=exam$n, beta=exam$beta, model="A", g=exam$g)
 ptm <- proc.time()
-res <- rkan(x=dout$x, y=dout$y, lambda1=0.42, lambda2=1, k=8, beta0=rep(0,p),w0=rep(1,n))
+res <- rkan(x=dout$x, y=dout$y, lambda1=0.6, lambda2=1, k=7, beta0=rep(0,exam$p),w0=rep(1,exam$n))
 as.vector(res$beta)
 as.vector(res$w)
 (proc.time() - ptm)[1]
-as.vector(res$w)
-
-
-m <- 500
-set <- sample(1:dim(spam)[1],m)
-x <- scale(as.matrix(spam[,-58]))[set,]
-y <- as.integer(spam[set,58])
-y[y==2] <- -1
-##set C parameter and kernel
-C <- 5
-rbf <- rbfdot(sigma = 0.1)
-## create H matrix etc.
-H <- kernelPol(rbf,x,,y)
-c <- matrix(rep(-1,m))
-A <- t(y)
-b <- 10
-l <- matrix(rep(0,m))
-u <- matrix(rep(C,m))
-r <- 1e5
-sv <- ipop(c,H,A,b,l,u,r)
-sv
