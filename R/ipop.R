@@ -15,7 +15,7 @@
 ## This code is released under the GNU Public License
 
 
-  ipop <- function(c, H, A, b, l, u, r, sigf=7, maxiter=40, margin=0.05, bound=10, verb=0)
+  ipop <- function(c, H, A, b, l, u, r, sigf=7, maxiter=40, margin=0.05, bound=10, verb=0, start=NULL)
           {
             
             if(!is.matrix(H)) stop("H must be a matrix")
@@ -72,48 +72,73 @@
             one.x <- -matrix(1,n,1)
             one.y <- -matrix(1,m,1)
             
-            solve.error <- NULL
-            ## starting point
-            if(smw == 0)
-              diag(H.x) <- H.diag + 1
-            else
-              smwn <- dim(H)[2]
+            solve.error <- 0
             H.y <- diag(1,m)
-            c.x <- c
-            c.y <- b
-            ## solve the system [-H.x A' A H.y] [x, y] = [c.x c.y]
-            if(smw == 0)
-            {
-              AP <- matrix(0,m+n,m+n)
-              xp <- 1:(m+n) <= n
-              AP[xp,xp] <- -H.x
-              AP[xp == FALSE,xp] <- A
-              AP[xp,xp == FALSE] <- t(A)
-              AP[xp == FALSE, xp== FALSE] <- H.y
-              s.tmp <- solve(AP,c(c.x,c.y))
-              x <- s.tmp[1:n]
-              y <- s.tmp[-(1:n)]
-            }
-            else
-            {
-              V <- diag(smwn)
-              smwinner <- chol(V + crossprod(H))
-              smwa1 <- t(A)
-              smwc1 <- c.x
-              smwa2 <- smwa1 - (H %*% solve(smwinner,solve(t(smwinner),crossprod(H,smwa1))))
-              smwc2 <- smwc1 - (H %*% solve(smwinner,solve(t(smwinner),crossprod(H,smwc1)))) 
-              y <- solve(A %*% smwa2 + H.y , c.y + A %*% smwc2)
-              x <- smwa2 %*% y - smwc2
+            AP <- matrix(0,m+n,m+n)
+            xp <- 1:(m+n) <= n
+            ## starting point
+            if(is.null(start)){
+              if(smw == 0)
+                diag(H.x) <- H.diag + 1
+              else
+                smwn <- dim(H)[2]
+              c.x <- c
+              c.y <- b
+              ## solve the system [-H.x A' A H.y] [x, y] = [c.x c.y]
+              if(smw == 0)
+              {
+                AP[xp,xp] <- -H.x
+                AP[xp == FALSE,xp] <- A
+                AP[xp,xp == FALSE] <- t(A)
+                AP[xp == FALSE, xp== FALSE] <- H.y
+                s.tmp <- solve(AP,c(c.x,c.y))
+                x <- s.tmp[1:n]
+                y <- s.tmp[-(1:n)]
+              }
+              else
+              {
+                V <- diag(smwn)
+                smwinner <- chol(V + crossprod(H))
+                smwa1 <- t(A)
+                smwc1 <- c.x
+                smwa2 <- smwa1 - (H %*% solve(smwinner,solve(t(smwinner),crossprod(H,smwa1))))
+                smwc2 <- smwc1 - (H %*% solve(smwinner,solve(t(smwinner),crossprod(H,smwc1)))) 
+                y <- solve(A %*% smwa2 + H.y , c.y + A %*% smwc2)
+                x <- smwa2 %*% y - smwc2
+              }
+              
+              g <- pmax(abs(x - l), bound)
+              z <- pmax(abs(x), bound)
+              t <- pmax(abs(u - x), bound)
+              s <- pmax(abs(x), bound)
+              v <- pmax(abs(y), bound)
+              w <- pmax(abs(y), bound)
+              p <- pmax(abs(r - w), bound)
+              q <- pmax(abs(y), bound)
+            } else {
+              x <- start$x
+              y <- start$y
+              g <- start$g
+              z <- start$z
+              t <- start$t
+              s <- start$s
+              v <- start$v
+              w <- start$w
+              p <- start$p
+              q <- start$q
+              
+              delta.x <- start$delta.x 
+              delta.y <- start$delta.y
+              delta.w <- start$delta.w
+              delta.s <- start$delta.s
+              delta.z <- start$delta.z
+              delta.q <- start$delta.q
+              delta.v <- start$delta.v
+              delta.p <- start$delta.p
+              delta.g <- start$delta.g
+              delta.t <- start$delta.t
             }
             
-            g <- pmax(abs(x - l), bound)
-            z <- pmax(abs(x), bound)
-            t <- pmax(abs(u - x), bound)
-            s <- pmax(abs(x), bound)
-            v <- pmax(abs(y), bound)
-            w <- pmax(abs(y), bound)
-            p <- pmax(abs(r - w), bound)
-            q <- pmax(abs(y), bound)
             mu <- as.vector(crossprod(z,g) + crossprod(v,w) + crossprod(s,t) + crossprod(p,q))/(2 * (m + n))
             sigfig <- 0
             counter <- 0
@@ -151,7 +176,8 @@
               if (sigfig >= sigf) break
               if (verb > 0)		      	# final report
                 cat( counter, "\t", signif(primal.infeasibility,6), signif(dual.infeasibility,6), sigfig, alfa, primal.obj, dual.obj,"\n")
-              ## some more intermediate variables (the hat section)
+             ##------------------------------------------------------------------------------------------
+               ## some more intermediate variables (the hat section)
               hat.beta <- beta - v * gamma.w / w
               hat.alpha <- alpha - p * gamma.q / q
               hat.nu <- nu + g * gamma.z / z
@@ -170,12 +196,10 @@
                 AP[xp,xp] <- -H.x
                 AP[xp == FALSE, xp== FALSE] <- H.y
                 s1.tmp <- try(solve(AP,c(c.x,c.y)), silent=TRUE)
-                if(inherits(s1.tmp, "try-error")){
-                  solve.error <- 1
-                  break
-                }
-                delta.x<-s1.tmp[1:n] 
-                delta.y <- s1.tmp[-(1:n)]
+                if(!inherits(s1.tmp, "try-error")){
+                  delta.x<-s1.tmp[1:n] 
+                  delta.y <- s1.tmp[-(1:n)]
+                  }
               }
               else
               {
@@ -200,6 +224,8 @@
               delta.p <- p * (gamma.q - delta.q) / q
               delta.g <- g * (gamma.z - delta.z) / z
               delta.t <- t * (gamma.s - delta.s) / s
+              
+              ##----------------------------------------------------
               ## compute update step now (sebastian's trick)
               alfa <- - (1 - margin) / min(c(delta.g / g, delta.w / w, delta.t / t, delta.p / p, delta.z / z, delta.v / v, delta.s / s, delta.q / q, -1))
               newmu <- (crossprod(z,g) + crossprod(v,w) + crossprod(s,t) + crossprod(p,q))/(2 * (m + n))
@@ -229,7 +255,8 @@
                   solve.error <- 1
                   break
                 }
-                delta.x<-s1.tmp[1:n] ; delta.y<-s1.tmp[-(1:n)]
+                delta.x<-s1.tmp[1:n] 
+                delta.y <- s1.tmp[-(1:n)]
               }
               else if (smw == 1)
               {
@@ -271,6 +298,10 @@
             ret$primal <- x
             ret$dual   <- drop(y)
             ret$sigfig <- sigfig
+            ret$counter <- counter
+            ret$sol <- list(x=x, g=g, w=w, t=t, p=p, y=y, z=z, v=v, s=s, q=q,
+                            delta.x=delta.x, delta.y=delta.y, delta.w=delta.w, delta.s=delta.s,delta.z=delta.z,
+                            delta.q=delta.q,delta.v=delta.v, delta.p=delta.p, delta.g=delta.g, delta.t=delta.t)
             if ((sigfig > sigf) & (counter < maxiter))
               ret$how    <- 'converged'
             else
@@ -287,7 +318,7 @@
                 ret$how    <- 'slow convergence, change bound?'
             }
             ret
-          }
+            }
 
 
 chunkmult <- function(Z, csize, colscale)

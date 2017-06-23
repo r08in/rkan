@@ -1,5 +1,5 @@
 #
-rkan <- function(x, y, lambda1, lambda2, k, g=p, beta0, w0, delta=1e-6, maxIter=50){
+rkan <- function(x, y, lambda1, lambda2, k, g=p, beta0, w0, delta=1e-6, maxIter=50, start.b=NULL, start.w=NULL){
   
   ## initialize
   n <- length(y)
@@ -11,8 +11,12 @@ rkan <- function(x, y, lambda1, lambda2, k, g=p, beta0, w0, delta=1e-6, maxIter=
   L1 <- length(lambda1)
   L2 <- length(lambda2)
   L3 <- length(k)
-  betaPre <- beta0
-  wPre <- w0
+  betaPre <- rep(0, p)
+  if(is.null(start.w)){
+    wPre <- rep(1, n)
+  } else {
+    wPre <- start.w
+  }
   
   beta <- array(0,dim=c(L1,L2,L3,p))
   w <- array(0,dim=c(L1,L2,L3,n))
@@ -33,7 +37,7 @@ rkan <- function(x, y, lambda1, lambda2, k, g=p, beta0, w0, delta=1e-6, maxIter=
   cmax <- 1000
   l <- c(rep(-cmax,p),rep(0,(tp-p)))
   u <- rep(cmax,tp)
-
+  counter <- 0
   ## iteration
   for(l1 in 1:L1){ # for each lambda1
     for(l2 in 1:L2){ # for each lambda2
@@ -53,7 +57,9 @@ rkan <- function(x, y, lambda1, lambda2, k, g=p, beta0, w0, delta=1e-6, maxIter=
           ## prepare for quadprog
           Dmat[(1:p), (1:p)] <- 1/n * t(xx) %*% xx
           dvec[1:p] <- -1/n * t(xx) %*% yy
-          sv <- ipop(c=dvec,H=Dmat,A=Amat,b=rep(0,2*p),l=l,u=u,r=rep(cmax,2*p),verb = 1)
+          sv <- ipop(c=dvec,H=Dmat,A=Amat,b=rep(0,2*p),l=l,u=u,r=rep(cmax,2*p),verb = 1, start=start.b)
+          counter <- counter + sv$counter
+          start.b <- sv$sol
           #betaTemp <- primal(sv)[1:p]
           betaTemp <- sv$primal[1:p]
           
@@ -74,5 +80,5 @@ rkan <- function(x, y, lambda1, lambda2, k, g=p, beta0, w0, delta=1e-6, maxIter=
       }
     }
   }
-  list(beta=beta, w=w, iter=iter, how=sv$how, sigfig=sv$sigfig)
+  list(beta=beta, w=w, iter=iter, how=sv$how, sigfig=sv$sigfig, counter=counter)
 }
