@@ -1,5 +1,4 @@
 # single case
-require(kernlab)
 source("simulation/GenerateData.R")
 set.seed(2017)
 ## Low dimension
@@ -10,7 +9,8 @@ exam1 <- list(n=100, p=16, g=rep(4,4), beta=c(beta1,beta2,rep(0,8)))
 exam <- exam1
 dout <- GenerateDataByModel(n=exam$n, beta=exam$beta, model="A", g=exam$g)
 ptm <- proc.time()
-res <- rkan(x=dout$x, y=dout$y, lambda1=0.6, lambda2=1, k=7, beta0=rep(0,exam$p),w0=rep(1,exam$n))
+res <- rkan(x=dout$x, y=dout$y, lambda1=0.4, lambda2=1, k=15, beta0=rep(0,exam$p),w0=rep(1,exam$n))
 as.vector(res$beta)
 as.vector(res$w)
 (proc.time() - ptm)[1]
+res$how

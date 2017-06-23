@@ -53,8 +53,9 @@ rkan <- function(x, y, lambda1, lambda2, k, g=p, beta0, w0, delta=1e-6, maxIter=
           ## prepare for quadprog
           Dmat[(1:p), (1:p)] <- 1/n * t(xx) %*% xx
           dvec[1:p] <- -1/n * t(xx) %*% yy
-          sv <- ipop(c=dvec,H=Dmat,A=Amat,b=rep(0,2*p),l=l,u=u,r=rep(cmax,2*p))
-          betaTemp <- primal(sv)[1:p]
+          sv <- ipop(c=dvec,H=Dmat,A=Amat,b=rep(0,2*p),l=l,u=u,r=rep(cmax,2*p),verb = 1)
+          #betaTemp <- primal(sv)[1:p]
+          betaTemp <- sv$primal[1:p]
           
           ## update w
           rseq <- (y - x %*% betaTemp)^2
@@ -73,5 +74,5 @@ rkan <- function(x, y, lambda1, lambda2, k, g=p, beta0, w0, delta=1e-6, maxIter=
       }
     }
   }
-  list(beta=beta, w=w, iter=iter)
+  list(beta=beta, w=w, iter=iter, how=sv$how, sigfig=sv$sigfig)
 }
