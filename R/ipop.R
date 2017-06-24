@@ -195,11 +195,12 @@
               if(smw == 0){
                 AP[xp,xp] <- -H.x
                 AP[xp == FALSE, xp== FALSE] <- H.y
-                s1.tmp <- try(solve(AP,c(c.x,c.y)), silent=TRUE)
-                if(!inherits(s1.tmp, "try-error")){
-                  delta.x<-s1.tmp[1:n] 
-                  delta.y <- s1.tmp[-(1:n)]
-                  }
+                s1.tmp <- try(qr.solve(AP,c(c.x,c.y)), silent=TRUE)
+                if(inherits(s1.tmp, "try-error")){
+                  s1.tmp <- qr.solve(AP,c(c.x,c.y))
+                } 
+                delta.x<-s1.tmp[1:n] 
+                delta.y <- s1.tmp[-(1:n)]
               }
               else
               {
@@ -250,11 +251,10 @@
               {
                 AP[xp,xp] <- -H.x
                 AP[xp == FALSE, xp== FALSE] <- H.y
-                s1.tmp <- try(solve(AP,c(c.x,c.y)), silent=TRUE)
+                s1.tmp <- try(qr.solve(AP,c(c.x,c.y)), silent=TRUE)
                 if(inherits(s1.tmp, "try-error")){
-                  solve.error <- 1
-                  break
-                }
+                  s1.tmp <- qr.solve(AP,c(c.x,c.y))
+                } 
                 delta.x<-s1.tmp[1:n] 
                 delta.y <- s1.tmp[-(1:n)]
               }

@@ -59,7 +59,7 @@ rkan <- function(x, y, lambda1, lambda2, k, g=p, beta0, w0, delta=1e-6, maxIter=
           dvec[1:p] <- -1/n * t(xx) %*% yy
           sv <- ipop(c=dvec,H=Dmat,A=Amat,b=rep(0,2*p),l=l,u=u,r=rep(cmax,2*p),verb = 1, start=start.b)
           counter <- counter + sv$counter
-          start.b <- sv$sol
+          #start.b <- sv$sol
           #betaTemp <- primal(sv)[1:p]
           betaTemp <- sv$primal[1:p]
           
