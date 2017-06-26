@@ -116,27 +116,17 @@
               p <- pmax(abs(r - w), bound)
               q <- pmax(abs(y), bound)
             } else {
+          
               x <- start$x
               y <- start$y
-              g <- start$g
-              z <- start$z
-              t <- start$t
-              s <- start$s
-              v <- start$v
-              w <- start$w
-              p <- start$p
-              q <- start$q
-              
-              delta.x <- start$delta.x 
-              delta.y <- start$delta.y
-              delta.w <- start$delta.w
-              delta.s <- start$delta.s
-              delta.z <- start$delta.z
-              delta.q <- start$delta.q
-              delta.v <- start$delta.v
-              delta.p <- start$delta.p
-              delta.g <- start$delta.g
-              delta.t <- start$delta.t
+              g <- ifelse(start$g<1e-6, 0.1, bound)
+              z <- ifelse(start$z<1e-6, 0.1, bound)
+              t <- ifelse(start$t<1e-6, 0.1, bound)
+              s <- ifelse(start$s<1e-6, 0.1, bound)
+              v <- ifelse(start$v<1e-6, 0.1, bound)
+              w <- ifelse(start$w<1e-6, 0.1, bound)
+              p <- ifelse(start$p<1e-6, 0.1, bound)
+              q <- ifelse(start$q<1e-6, 0.1, bound)
             }
             
             mu <- as.vector(crossprod(z,g) + crossprod(v,w) + crossprod(s,t) + crossprod(p,q))/(2 * (m + n))
@@ -195,10 +185,10 @@
               if(smw == 0){
                 AP[xp,xp] <- -H.x
                 AP[xp == FALSE, xp== FALSE] <- H.y
-                s1.tmp <- try(qr.solve(AP,c(c.x,c.y)), silent=TRUE)
+                s1.tmp <- try(solve(AP,c(c.x,c.y)), silent=TRUE)
                 if(inherits(s1.tmp, "try-error")){
-                  s1.tmp <- qr.solve(AP,c(c.x,c.y))
-                } 
+                  s1.tmp <- qr.solve(AP,c(c.x,c.y), tol=1e-20)
+                }
                 delta.x<-s1.tmp[1:n] 
                 delta.y <- s1.tmp[-(1:n)]
               }
@@ -251,9 +241,9 @@
               {
                 AP[xp,xp] <- -H.x
                 AP[xp == FALSE, xp== FALSE] <- H.y
-                s1.tmp <- try(qr.solve(AP,c(c.x,c.y)), silent=TRUE)
+                s1.tmp <- try(solve(AP,c(c.x,c.y)), silent=TRUE)
                 if(inherits(s1.tmp, "try-error")){
-                  s1.tmp <- qr.solve(AP,c(c.x,c.y))
+                  s1.tmp <- qr.solve(AP,c(c.x,c.y), tol=1e-20)
                 } 
                 delta.x<-s1.tmp[1:n] 
                 delta.y <- s1.tmp[-(1:n)]
