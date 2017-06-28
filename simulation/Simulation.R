@@ -1,13 +1,12 @@
-source("Simulation/CombineData.R")
-source("Simulation/SetupMatlab.R")
 source("Simulation/GenerateData.R")
-source('Simulation/mmnngreg.R')
 
-simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), p = NULL, method = "PAWLS", 
-    matlab = NULL, seed = 2014, useDataFile = FALSE, standardize = TRUE, penalty1 = "1-w0", updateInitial = FALSE, 
-    criterion = "BIC", initCrit="BIC",intercept = TRUE, initial = "uniform", lambda2 = NULL, 
-    lambda1 = NULL,lambda2.min=1e-03, lambda1.min=0.05, search = "cross", type = c("Lasso", 
-        "Ridge"), pro=0.1) {
+
+simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), g=p, pro=0.1, 
+                      da=0.5, db=0.5, 
+                      useDataFile = FALSE,seed=2017,
+                      method = "rkan", standardize = FALSE, intercept = FALSE, 
+                      lambda1=NULL, lambda2=NULL,
+                      ...) {
     mcount <- length(model)
     
     # define output
@@ -24,8 +23,8 @@ simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), p = NULL
     mses <- rep(0, L)
     times <- rep(0, L)
     nres <- array(list(), mcount)
-    nlambda2 <- ifelse(is.null(lambda2),50,length(lambda2))
-    nlambda1 <- ifelse(is.null(lambda1),100,length(lambda1))
+    nlambda2 <- ifelse(is.null(lambda2),20,length(lambda2))
+    nlambda1 <- ifelse(is.null(lambda1),20,length(lambda1))
     crit2 <- matrix(0,nrow=L,ncol=nlambda2)
     crit1 <- matrix(0,nrow=L,ncol=nlambda1)
     wdf <- array(0,dim=c(L,nlambda2,nlambda1))
@@ -36,6 +35,9 @@ simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), p = NULL
     lam1 <- crit1
     dfw <- rep(0,L)
     dfb <- rep(0,L)
+    
+    zero <- 1e-7
+    
     pb <- txtProgressBar(1, mcount * L, style = 3)
     for (j in 1:mcount) {
         # for each model
@@ -44,7 +46,7 @@ simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), p = NULL
         if (!is.null(seed)) {
             set.seed(seed)
         }
-        p = length(beta)
+        p <- length(beta)
         if (useDataFile) {
             f = paste("data\\", model[j], n, "X", p, "_", pro, ".rda", sep = "")
             load(f)
@@ -62,140 +64,26 @@ simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), p = NULL
                 out = data[[i]]
                 beta <- out$beta
             } else {
-                out = GenerateDataByModel(n = n, beta = beta, model = model[j], dataType = type, pro=pro)
+                out = GenerateDataByModel(n = n, beta = beta, model = model[j], pro=pro, g=g, a=da, b=db)
             }
             
             # try different methods
-            if (method == "LAD") {
-                init = InitParam(out$x, out$y, method = "LAD")
-                b[i, ] = init$beta
-            } else if (method == "ROSS") {
-              if(intercept) out$x <- AddIntercept(out$x)
-              setVariable(matlab, X = out$x)
-              setVariable(matlab, y = out$y)
-              evaluate(matlab, "[betaRoss time]=RossSimulate(X,y)")
-              times[i] <- getVariable(matlab, "time")[[1]]
-              betaRoss = getVariable(matlab, "betaRoss")
-              res <- list(beta=betaRoss$betaRoss)
-              b[i, ] = as.vector(betaRoss$betaRoss)
-            } else if (method == "ADL") {
+            if (method == "rkan") {
               ptm <- proc.time()
-              fit1<- ncvreg(out$x, out$y, penalty='lasso')
-              beta.init <- coef(fit1)[-1 ,which.min(BIC(fit1))]
-              w <- pmin(1e6, 1/abs(beta.init))
-              fit2 <- ncvreg(out$x, out$y,penalty='lasso', penalty.factor=w)
-              beta.alasso <- coef(fit2)[, which.min(BIC(fit2))]
+              res = rkan(x=out$x, y=out$y,lambda1=lambda1, lambda2=lambda2, nlambda1=nlambda1, nlambda2=nlambda2, ...)
               times[i] <- (proc.time() - ptm)[1]
-              res <- list(beta=beta.alasso)
-            } else if (method == "Lasso") {
-              ptm <- proc.time()
-              fit1<- ncvreg(out$x, out$y, penalty='lasso')
-              
-              beta.alasso <- coef(fit1)[, which.min(BIC(fit1))]
-              times[i] <- (proc.time() - ptm)[1]
-              res <- list(beta=beta.alasso)
-            }else if (method == "LTS") {
-              require(robustHD)
-              ptm <- proc.time()
-              res = sparseLTS(out$x, out$y, lambda=seq(from=1, to=ifelse(n>p,0.001,0.01),length.out = ifelse(n>p,100,20)), mode = "fraction",
-                              intercept = TRUE)
-              times[i] <- (proc.time() - ptm)[1]
-              best <- res$crit$best[1]
-              b[i, ] = res$coefficients[,best]
-              w[i, ] = res$wt[,best]
-              res$beta <- res$coefficients[,best]
-            } else if (method == "IPOD") {
-              ptm <- proc.time()
-              H <- out$x %*% solve(t(out$x)%*%out$x)%*%t(out$x)
-              res <- IPOD(out$x,out$y,H, method = "soft")
-              times[i] <- (proc.time() - ptm)[1]
-              w[i,] <- ifelse(res$gamma == 0, 1, 0)
-              res$beta <- rep(0, p + intercept)
-            }else if (method == "MMNNG") {
-              ptm <- proc.time()
-              try_res <- try(mmnngreg(out$x,out$y))
-              times[i] <- (proc.time() - ptm)[1]
-              if(class(try_res)[1]=="try-error"){
-                browser()
-                res$beta <- rep(0,ifelse(intercept, p+1, p))
-              } else{
-                res$beta <- try_res$betac
-              }
-            } else if (method == "MMNNG_DATA") {
-                # load data file and result file
-                dfile <- paste("data\\", model[j], n, "X", p,"_", pro, ".rda", sep = "")
-                rfile <- paste("data\\", model[j], n, "X", p,"_", pro, "_res", ".rda", sep = "")
-                lf <- try(load(dfile))
-                if (class(lf) == "try-error") {
-                  data <- list(out)
-                  res_temp <- list(cfr=rep(0,L), cfr2=rep(0,L),ofr=rep(0,L),pdr=rep(0,L),
-                                   fdr=rep(0,L), msize=rep(0,L),mses=rep(0,L),times=rep(0,L),ind=1, count=rep(0,L))
-                } else {
-                  if (length(data) == L) break
-                  data = c(data, list(out))
-                  load(rfile)
-                  res_temp$ind <- res_temp$ind+1
-                }
-                save(data, file = dfile)
-                save(res_temp, file=rfile)
-                
-                # fit mmnngreg
-                ptm <- proc.time()
-                res = mmnngreg(out$x, out$y)
-                times[i] <- (proc.time() - ptm)[1]
-                res$beta <- res$betac
-                
-            } else if (method == "PAMLS") {
-              ptm <- proc.time()
-              res = pamls(out$x, out$y, penalty1 = penalty1, nlambda2 = 50, nlambda1 = 100, lambda2 = lambda2,
-                            lambda1=lambda1, lambda2.min=lambda2.min, lambda1.min=lambda1.min, delta = 1e-06, 
-                            maxIter = 1000, initial = initial, intercept = intercept, standardize = standardize, 
-                            updateInitialTimes = 0, criterion = criterion, initCrit=initCrit, search = search)
-              times[i] <- (proc.time() - ptm)[1]
-              b[i, ] = res$beta
-              w[i, ] = 1-res$gam
-              iter[i] = res$iter
-              iw[i] = res$index2
-              ib[i] = res$index1
-              crit2[i,] = res$crit2
-              crit1[i,] =  res$crit1
-              lam2[i,] =  res$lambda2s
-              lam1[i,] = res$lambda1s
-              dfb[i] = res$bdf
-              dfw[i] = res$gdf
-              if(search=="grid"){
-                bic[i,,] = res$res$bic
-                bic2[i,,] = res$res$bic2
-                bdf[i,,]= res$res$bdf
-                wdf[i,,]= res$res$gdf
-              }
-              
-            }else if (method == "PAWLS") {
-              updateInitialTimes <- ifelse(updateInitial, 2, 0)
-              ptm <- proc.time()
-              res = pawls(out$x, out$y, nlambda2 = 50, nlambda1 = 100, lambda2 = lambda2,
-                            lambda1=lambda1, delta = 1e-06, lambda1.min = lambda1.min,lambda2.min = lambda2.min,
-                maxIter = 1000, initial = initial, intercept = intercept, standardize = standardize, search = search)
-              times[i] <- (proc.time() - ptm)[1]
-              b[i, ] = res$beta
+              b[i, ] = ifelse(abs(res$beta) >zero, res$beta, 0)
               w[i, ] = res$w
-              iter[i] = res$iter
-              #crit2[i,] = res$crit2
-              #crit1[i,] =  res$crit1
               lam2[i,] =  res$lambda2
               lam1[i,] = res$lambda1
-              if(search=="grid"){
-                bic[i,,] = res$raw.bic
-                bic2[i,,] = res$bic
-              }
-              
-            }
+            } 
             
             # record result
+
             if(intercept) res$beta <- res$beta[-1]
             true_set <- which(beta != 0)
             pnum <- length(true_set)
-            active_set <- which(res$beta != 0)
+            active_set <- which(abs(res$beta) > zero)
             msize[i] <- length(active_set)
             common_size <- length(intersect(true_set, active_set))
             cfr[i] <- ifelse(common_size == pnum & msize[i] == pnum, 1, 0)  # correctly fit
@@ -205,32 +93,8 @@ simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), p = NULL
             fdr[i] <- ifelse(msize[i]==0,0,(msize[i] - common_size)/msize[i])  #
             mses[i] <- sum((res$beta - beta)^2)
             setTxtProgressBar(pb, (j - 1) * L + i)
-            if(method == "MMNNG_DATA"){
-              load(rfile)
-              ind <- res_temp$ind
-              res_temp$cfr[ind] <- cfr[i]
-              res_temp$cfr2[ind] <- cfr2[i]
-              res_temp$ofr[ind] <- ofr[i]
-              res_temp$pdr[ind] <- pdr[i]
-              res_temp$fdr[ind] <- fdr[i]
-              res_temp$msize[ind] <- msize[i]
-              res_temp$mses[ind] <- mses[i]
-              res_temp$times[ind] <- times[i]
-              res_temp$count[ind] <- 1
-              save(res_temp, file=rfile)
-            }
         }
-        if(method == "MMNNG_DATA"){
-          load(rfile)
-          cfr <- res_temp$cfr
-          cfr2 <- res_temp$cfr2
-          ofr <- res_temp$ofr
-          pdr <- res_temp$pdr
-          fdr <- res_temp$fdr
-          msize <- res_temp$msize
-          mses <- res_temp$mses
-          times <- res_temp$times
-        }
+        
         # compute measurement MSE
         MSE <- round(mean(mses), 3)
         # CFR, OFR, PDR, FDR, AN
@@ -243,7 +107,7 @@ simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), p = NULL
         TIME <- sum(times)
         # outlier dectection
         OD <- "not applicable."
-        if(method == "PAWLS" || method == "PAMLS" || method == "LTS"|| method=="IPOD" ){
+        if(method == "rkan"  ){
           if(model[j] == "A" || model[j] == "B"){
             curPro <- 0
           }
@@ -257,12 +121,10 @@ simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), p = NULL
         }
        
         # BIC curve
-        if(method=="PAWLS"||method=="PAMLS"){
+        if(method=="rkan"){
           nres[[j]] <- list(model = model[j], CFR = CFR, CFR2 = CFR2, OFR = OFR, PDR = PDR, FDR = FDR, 
                             AN = AN, MSE = MSE, mses=mses, TIME = TIME,iter=iter,OD=OD,
-                            crit2=crit2,lam2=lam2,crit1=crit1,lam1=lam1,betas=b,ws=w,
-                            bic=bic,bic2=bic2
-                            )
+                            lam2=lam2,lam1=lam1,betas=b,ws=w)
         } else{
           nres[[j]] <- list(model = model[j], CFR = CFR, CFR2 = CFR2, OFR = OFR, PDR = PDR, FDR = FDR, 
                             AN = AN, MSE = MSE, mses=mses, TIME = TIME, iw=iw, ib=ib,OD=OD)

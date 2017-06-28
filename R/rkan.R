@@ -1,5 +1,5 @@
 #' @export
-rkan <- function(x, y, nlambda1 = 30, nlambda2 = 30, nk=p,lambda1 = NULL, lambda2 = NULL, k=NULL,lambda1.min=0.05,
+rkan <- function(x, y, nlambda1 = 20, nlambda2 = 20, nk=p,lambda1 = NULL, lambda2 = NULL, k=NULL,lambda1.min=0.05,
                  lambda2.min=0.001, beta0 = NULL, w0 = NULL, intercept = TRUE, standardize = TRUE){
   n = length(y)
   p = dim(x)[2]

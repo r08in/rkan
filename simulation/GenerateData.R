@@ -22,7 +22,8 @@ GenerateData = function(n, p = NULL, pNum = NULL, dataSetNum = 1, beta = NULL, e
             pNum = sum(beta[1, ] != 0 + 0)
         }
     }
-    
+  if (is.null(g))
+    g <- p
     # check data if(n<=0||p<=0||pNum<=0) stop('n or p or pNum cannot smaller than 0.')
     if (p < pNum) 
         stop("p cannot be smaller than pNum.")
