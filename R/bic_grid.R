@@ -2,11 +2,12 @@
 
 ## BIC
 
-BIC_grid = function(wloss, beta, w) {
+BIC_grid = function(wloss, beta, w, k=NULL, g=p) {
   
   l1 <- dim(beta)[1]
   l2 <-  dim(beta)[2]
   l3 <- dim(beta)[3]
+  p <- dim(beta)[4]
   index <- rep(0, 3)
   BIC.max <- 1e+08
   bicPre <- BIC.max
@@ -19,7 +20,7 @@ BIC_grid = function(wloss, beta, w) {
   
   for (i in 1 : l1) {
     for (j in 1 : l2){
-      for(k in 1: l3){
+      for(k in 1 : l3){
         wdf[i, j, k] <- sum(w[i, j, k,]!=1)
         bdf[i, j, k] <- sum(abs(beta[i, j, k,]) > 1e-7)
         bicTemp[i, j, k] <- log(wloss[i, j, k]/(n)) + (bdf[i, j, k] + wdf[i, j, k]) * log(n)/(n)
@@ -29,7 +30,7 @@ BIC_grid = function(wloss, beta, w) {
           bicTemp2[i, j, k]<- bicTemp[i, j, k]
           if (bicTemp[i, j, k] <= bicPre) {
             index <-c(i, j, k)
-            bicPre = bicTemp[i, j, k]
+            bicPre <- bicTemp[i, j, k]
           }
         }
       }
@@ -43,3 +44,6 @@ BIC_grid = function(wloss, beta, w) {
              index=index)
 }
 
+getDf4kan <- function(beta, kg){
+  
+}

@@ -85,7 +85,7 @@ GenerateData = function(n, p = NULL, pNum = NULL, dataSetNum = 1, beta = NULL, e
             error = rt(n, 2)  # df=2 for t distribution
         } else {
             error = rnorm(n, 0, errorSigma)
-        }
+        } 
         tempy[j, ] = tempx[j, , ] %*% tempBeta[j, ] + error
     }
     
@@ -116,7 +116,7 @@ GenerateDataByModel = function(n, beta, model = c("A", "B", "C", "D", "E"), pro 
         u1 = runif(oNum, 0, 1)
         u2 = runif(oNum, 0, 1)
         out$y[1:oNum] = out$y[1:oNum] + ifelse(u1 < 0.5, -1, 1) * (20 + 10 * u2)
-    } else if (model == "D") {
+    } else if (model == "D") { # come back latter, for x outliers
         out = GenerateData(n = n, dataSetNum = 1, beta = beta, ...)
         pnum = sum(beta != 0)
         oNum = round(n * pro)
@@ -125,7 +125,7 @@ GenerateDataByModel = function(n, beta, model = c("A", "B", "C", "D", "E"), pro 
         out$y[1:oNum] = out$y[1:oNum] + ifelse(u1 < 0.5, -1, 1) * (20 + 10 * u2)
         out$x[1:oNum, (pnum + 1):(pnum + 5)] = out$x[1:oNum, (pnum + 1):(pnum + 5)] + 10
     } else if (model == "E2") {
-      out = GenerateData(n = n, dataSetNum = 1, beta = beta)
+      out = GenerateData(n = n, dataSetNum = 1, beta = beta, ...)
       pnum = sum(beta != 0)
       ratio <- 3
       oNum = round(n * pro)
@@ -142,7 +142,7 @@ GenerateDataByModel = function(n, beta, model = c("A", "B", "C", "D", "E"), pro 
       u2 = runif(oNum, 0, 1)
       out$y[1:oNum] = out$y[1:oNum] + ifelse(u1 < 0.5, -1, 1) * (20 + 10 * u2)
     }else if (model == "E") {
-      out = GenerateData(n = n, dataSetNum = 1, beta = beta)
+      out = GenerateData(n = n, dataSetNum = 1, beta = beta, ...)
       pnum = sum(beta != 0)
       oNum = round(n * pro)
       xx <- out$x

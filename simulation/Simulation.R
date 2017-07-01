@@ -4,7 +4,7 @@ source("Simulation/GenerateData.R")
 simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), g=p, pro=0.1, 
                       da=0.5, db=0.5, 
                       useDataFile = FALSE,seed=2017,
-                      method = "rkan", standardize = FALSE, intercept = FALSE, 
+                      method = "rkan", standardize = TRUE, intercept = FALSE, 
                       lambda1=NULL, lambda2=NULL,
                       ...) {
     mcount <- length(model)
