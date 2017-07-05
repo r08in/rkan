@@ -8,9 +8,9 @@ exam1 <- list(n=100, p=400, g=rep(4,100), beta=c(beta1,beta2,rep(0,392)))
 exam2 <- list(n=100, p=16, g=rep(4,4), beta=c(beta1,beta2,rep(0,8)))
 #exam1 <- list(n=10,g=rep(2,2), beta=c(1,2,0,0))
 exam <- exam2
-dout <- GenerateDataByModel(n=exam$n, beta=exam$beta, model="C", g=exam$g)
+dout <- GenerateDataByModel(n=exam$n, beta=exam$beta, model="A", g=exam$g)
 ptm <- proc.time()
-res <- rkan_grid(x=dout$x, y=dout$y, lambda1=0.4, lambda2=1, k=0.5, verb=1)
+res <- rkan_grid(x=dout$x, y=dout$y, lambda1=0.7, lambda2=2, k=1/16)
 as.vector(res$beta)
 as.vector(res$w)
 (proc.time() - ptm)[1]

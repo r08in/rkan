@@ -49,7 +49,7 @@ rkan <- function(x, y, nlambda1 = 20, nlambda2 = 20, nk=p,lambda1 = NULL, lambda
   }
   
   ## Fit 
-  res1 <- rkan_grid(x=XX, y=yy, lambda1=lambda1, lambda2=lambda2, k=k)
+  res1 <- rkan_grid2(x=XX, y=yy, lambda1=lambda1, lambda2=lambda2, k=k)
   res2 <- BIC_grid(res1$wloss, res1$beta, res1$w)
   fit <- list(beta = res2$beta,
               w = res2$w,

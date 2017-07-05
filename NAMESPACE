@@ -1,4 +1,6 @@
 export(rkan)
 export(rkan_grid)
+export(rkan_grid2)
 useDynLib(rkan, .registration = TRUE)
 useDynLib(rkan,Standardize)
+useDynLib(rkan,rkan_GRID)

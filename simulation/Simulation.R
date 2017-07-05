@@ -10,7 +10,6 @@ simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), g=p, pro
     mcount <- length(model)
     
     # define output
-    iter = rep(0, L)
     iw = rep(0, L)
     ib = rep(0,L)
     cfr <- rep(0, L)
@@ -76,6 +75,7 @@ simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), g=p, pro
               w[i, ] = res$w
               lam2[i,] =  res$lambda2
               lam1[i,] = res$lambda1
+              iter=res$iter
             } 
             
             # record result
