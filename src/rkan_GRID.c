@@ -13,11 +13,15 @@ typedef int bool;
 // get the Kth largest pos
 double  GetKLargest(int * rank, double * beta, int pos, int k, int m)
 {
-  //printf("m=%d k=%d\n", m, k);
+  //printf("m=%d pos=%d\n", m, pos);
   if(m==k)
     return 0;
   if(fabs(beta[rank[k-1]]) > fabs(beta[pos]))
+  {
+    //printf("beta[rank[k-1]]=%f k=%d\n", beta[rank[k-1]], k);
     return beta[rank[k-1]];
+  }
+
   else 
     return beta[rank[k]];
 }
@@ -232,7 +236,7 @@ SEXP rkan_GRID( SEXP X_, SEXP Y_, SEXP Lambda1_, SEXP Lambda2_, SEXP k_, SEXP g_
   double *wPre=Calloc(n, double);
   double *r=Calloc(n, double);
 
-  int kl=0;
+  double kl=0;
   
   for(int i=0;i<m;i++) //need revised later
   {
@@ -243,13 +247,6 @@ SEXP rkan_GRID( SEXP X_, SEXP Y_, SEXP Lambda1_, SEXP Lambda2_, SEXP k_, SEXP g_
   for(int i=0;i<L3*L2*L1;i++)
   {
     loss[i]=wloss[i]=iter[i]=0;
-  }
-  
- 
-  
-  for(int i=0;i<L3;i++)
-  {
-    k[i]=floor(k[i]*m);
   }
   
   //temp
@@ -317,6 +314,7 @@ SEXP rkan_GRID( SEXP X_, SEXP Y_, SEXP Lambda1_, SEXP Lambda2_, SEXP k_, SEXP g_
   }
   for (int l3=0; l3<L3;l3++)
   {
+    int kth=floor(k[l3]*m);
     //interation for each lambda2
     for(int l2=0;l2<L2;l2++)
     {
@@ -368,8 +366,8 @@ SEXP rkan_GRID( SEXP X_, SEXP Y_, SEXP Lambda1_, SEXP Lambda2_, SEXP k_, SEXP g_
             
             
             //(2)update betaj
-            kl=GetKLargest(rank, betaPre, j, k[l3],m); 
-            //printf("k=%f klargest=%d \n",k[l3],kl);
+            kl=GetKLargest(rank, betaPre, j, kth,m); 
+            //printf("k=%f klargest=%f \n",k[l3],kl);
             beta[j*L3*L2*L1+l3*L1*L2+l2*L1+l1]=Kthreshold(zj, fabs(kl), Lam1[j], c[j]);
             
             //(3)update r
@@ -377,8 +375,8 @@ SEXP rkan_GRID( SEXP X_, SEXP Y_, SEXP Lambda1_, SEXP Lambda2_, SEXP k_, SEXP g_
             betaPre[j]=beta[j*L3*L2*L1+l3*L1*L2+l2*L1+l1];
             maintainRank(rank, betaPre, j,m);
            // getRank(rank,betaPre,m);
-           
-            /*printf("print beta:");
+           /*
+            printf("print beta:");
             for(int i=0;i<m;i++) //test
             {
               printf("%f ",betaPre[i]);

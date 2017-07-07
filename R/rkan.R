@@ -1,6 +1,6 @@
 #' @export
 rkan <- function(x, y, nlambda1 = 20, nlambda2 = 20, nk=p,lambda1 = NULL, lambda2 = NULL, k=NULL,lambda1.min=0.05,
-                 lambda2.min=0.001, beta0 = NULL, w0 = NULL, intercept = TRUE, standardize = TRUE){
+                 lambda2.min=0.001, beta0 = NULL, w0 = NULL, initial = c("uniform","rkan"), intercept = TRUE, standardize = TRUE){
   n = length(y)
   p = dim(x)[2]
   ## check error
@@ -17,6 +17,7 @@ rkan <- function(x, y, nlambda1 = 20, nlambda2 = 20, nk=p,lambda1 = NULL, lambda
   if (any(is.na(y)) | any(is.na(x))) 
     stop("Missing data (NA's) detected.Take actions to eliminate missing data before passing 
          X and y to pawls.")
+  initial <- match.arg(initial)
   
   if (!is.null(lambda1)) 
     nlambda1 <- length(lambda1)
@@ -24,6 +25,20 @@ rkan <- function(x, y, nlambda1 = 20, nlambda2 = 20, nk=p,lambda1 = NULL, lambda
     nlambda2 <- length(lambda2)
   if (!is.null(k))
     nk <- length(k)
+
+  ## set initial
+  if (initial == "rkan") {
+    init = rkan(x, y)
+    beta0 = ifelse(abs(init$beta)<1e-7, 0.001, init$beta)
+    w0 = ifelse(init$w == 1, 0.999, init$w)
+  } else if (initial == "uniform") {
+    if (is.null(beta0)) {
+      beta0 = rep(1, p)
+    }
+    if (is.null(w0)){
+      w0 = rep(0, n)
+    }
+  }
   
   ## sandardize
   if (standardize) {
@@ -39,7 +54,7 @@ rkan <- function(x, y, nlambda1 = 20, nlambda2 = 20, nk=p,lambda1 = NULL, lambda
   ## set tunning parameter
   if (is.null(lambda1)||is.null(lambda2)||is.null(k)) {
     param <- set_parameter(x=XX, y=yy, nlambda1=nlambda1, nlambda2=nlambda2, nk=nk,
-                             lambda1.min=lambda1.min, lambda2.min=lambda2.min)
+                             lambda1.min=lambda1.min, lambda2.min=lambda2.min, beta0=beta0, w0=w0)
     if (is.null(lambda1)) 
       lambda1 <- param$lambda1
     if (is.null(lambda2)) 
@@ -49,7 +64,7 @@ rkan <- function(x, y, nlambda1 = 20, nlambda2 = 20, nk=p,lambda1 = NULL, lambda
   }
   
   ## Fit 
-  res1 <- rkan_grid2(x=XX, y=yy, lambda1=lambda1, lambda2=lambda2, k=k)
+  res1 <- rkan_grid(x=XX, y=yy, lambda1=lambda1, lambda2=lambda2, k=k, beta0=beta0, w0=w0)
   res2 <- BIC_grid(res1$wloss, res1$beta, res1$w)
   fit <- list(beta = res2$beta,
               w = res2$w,

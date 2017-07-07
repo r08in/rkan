@@ -15,7 +15,7 @@
 ## This code is released under the GNU Public License
 
 
-  ipop <- function(c, H, A, b, l, u, r, sigf=7, maxiter=40, margin=0.05, bound=10, verb=0, start=NULL)
+  ipop2 <- function(c, H, A, b, l, u, r, sigf=20, maxiter=40, margin=0.05, bound=10, verb=0, start=NULL)
           {
             
             if(!is.matrix(H)) stop("H must be a matrix")
@@ -289,7 +289,7 @@
             ret$dual   <- drop(y)
             ret$sigfig <- sigfig
             ret$counter <- counter
-            ret$sol <- list(x=x, g=g, w=w, t=t, p=p, y=y, z=z, v=v, s=s, q=q,
+            ret$sol <- list(x=x, g=g, w=w, t=t, p=p, y=y, z=z, v=v, s=s, q=q,mu=mu,
                             delta.x=delta.x, delta.y=delta.y, delta.w=delta.w, delta.s=delta.s,delta.z=delta.z,
                             delta.q=delta.q,delta.v=delta.v, delta.p=delta.p, delta.g=delta.g, delta.t=delta.t)
             if ((sigfig > sigf) & (counter < maxiter))

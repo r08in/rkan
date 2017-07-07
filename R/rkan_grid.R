@@ -1,5 +1,25 @@
 #' @export
-rkan_grid <- function(x, y, lambda1, lambda2, k, g=p, delta=1e-6, maxIter=50, start.b=NULL, start.w=NULL,...){
+rkan_grid <- function(x, y, lambda1, lambda2, k, g=p, delta=1e-10, maxIter=50, beta0, w0,
+                      start.b=rep(0,p), start.w=rep(1,n),...){
+  
+  ## initialize
+  n <- length(y)
+  p <- dim(x)[2]
+  L1 <- length(lambda1)
+  L2 <- length(lambda2)
+  L3 <- length(k)
+  if(!is.null(g) & sum(g)!=p)
+    stop("group info does not match x.")
+  res <- .Call("rkan_GRID", x, y, lambda1, lambda2, k, g, beta0, w0, delta, maxIter, 
+               #ifelse(intercept, 1, 0), 
+               startBeta = start.b, startW = start.w)
+  res = list(beta = array(res[[1]], dim = c(L1,L2,L3, p)), w = array(res[[2]], dim = c(L1,L2,L3, n)), 
+             wloss = array(res[[3]], dim = c(L1,L2,L3)), loss = array(res[[4]], dim = c(L1,L2,L3)), 
+             iter = array(res[[5]], dim = c(L1,L2,L3)))
+  
+}
+#' @export
+rkan_grid2 <- function(x, y, lambda1, lambda2, k, g=p, delta=1e-10, maxIter=50, start.b=NULL, start.w=NULL,...){
   
   ## initialize
   n <- length(y)
@@ -57,8 +77,10 @@ rkan_grid <- function(x, y, lambda1, lambda2, k, g=p, delta=1e-6, maxIter=50, st
           ## prepare for quadprog
           Dmat[(1:p), (1:p)] <- 1/n * t(xx) %*% xx
           dvec[1:p] <- -1/n * t(xx) %*% yy
-          sv <- ipop(c=dvec,H=Dmat,A=Amat,b=rep(0,2*p),l=l,u=u,r=rep(cmax,2*p),start=start.b,...)
-          count <- max(count, sv$counter) 
+          sv <- ipop2(c=dvec,H=Dmat,A=Amat,b=rep(0,2*p),l=l,u=u,r=rep(cmax,2*p),start=start.b,...)
+          #sv <- ipop(c=dvec,H=Dmat,A=Amat,b=rep(0,2*p),l=l,u=u,r=rep(cmax,2*p))
+          #count <- max(count, sv$counter)
+          #count <- sv$mu
           #start.b <- sv$sol
           #betaTemp <- primal(sv)[1:p]
           betaTemp <- sv$primal[1:p]
@@ -78,8 +100,8 @@ rkan_grid <- function(x, y, lambda1, lambda2, k, g=p, delta=1e-6, maxIter=50, st
         beta[l1, l2, l3,] <- betaPre
         w[l1,l2,l3,] <- wPre
         wloss[l1, l2, l3] <- t(wPre^2) %*% rseq
-        how[l1, l2, l3] <- sv$how
-        counter[l1, l2, l3] <- count
+        #how[l1, l2, l3] <- sv$how
+        #counter[l1, l2, l3] <- count
       } # end loop for k
       betaPre <- beta[l1, l2, 1, ]
       wPre <- w[l1, l2, 1, ]
@@ -90,25 +112,5 @@ rkan_grid <- function(x, y, lambda1, lambda2, k, g=p, delta=1e-6, maxIter=50, st
   list(beta=beta, w=w, wloss=wloss, iter=iter, how=how, counter=counter)
 }
 
-#' @export
-rkan_grid2 <- function(x, y, lambda1, lambda2, k, g=p, delta=1e-6, maxIter=50, start.b=rep(0,p), start.w=rep(1,n),...){
-  
-  ## initialize
-  n <- length(y)
-  p <- dim(x)[2]
-  L1 <- length(lambda1)
-  L2 <- length(lambda2)
-  L3 <- length(k)
-  if(!is.null(g) & sum(g)!=p)
-    stop("group info does not match x.")
-  beta0 <- rep(1, p)
-  w0 <- rep(0, n)
-  res <- .Call("rkan_GRID", x, y, lambda1, lambda2, k, g, beta0, w0, delta, maxIter, 
-               #ifelse(intercept, 1, 0), 
-               startBeta = start.b, startW = start.w)
-  res = list(beta = array(res[[1]], dim = c(L1,L2,L3, p)), w = array(res[[2]], dim = c(L1,L2,L3, n)), 
-             wloss = array(res[[3]], dim = c(L1,L2,L3)), loss = array(res[[4]], dim = c(L1,L2,L3)), 
-             iter = array(res[[5]], dim = c(L1,L2,L3)))
-  
-}
+
 
