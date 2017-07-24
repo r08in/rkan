@@ -1,6 +1,7 @@
 #' @export
-rkan <- function(x, y, nlambda1 = 20, nlambda2 = 20, nk=p,lambda1 = NULL, lambda2 = NULL, k=NULL,lambda1.min=0.05,
-                 lambda2.min=0.001, beta0 = NULL, w0 = NULL, initial = c("uniform","rkan"), intercept = TRUE, standardize = TRUE){
+rkan <- function(x, y, nlambda1 = 20, nlambda2 = 20, nk=p,lambda1 = NULL, lambda2 = NULL, k=NULL, g=p,
+                 lambda1.min=0.05, lambda2.min=0.001, beta0 = NULL, w0 = NULL, 
+                 initial = c("uniform","rkan"), intercept = TRUE, standardize = TRUE){
   n = length(y)
   p = dim(x)[2]
   ## check error
@@ -64,8 +65,8 @@ rkan <- function(x, y, nlambda1 = 20, nlambda2 = 20, nk=p,lambda1 = NULL, lambda
   }
   
   ## Fit 
-  res1 <- rkan_grid(x=XX, y=yy, lambda1=lambda1, lambda2=lambda2, k=k, beta0=beta0, w0=w0)
-  res2 <- BIC_grid(res1$wloss, res1$beta, res1$w)
+  res1 <- rkan_grid(x=XX, y=yy, lambda1=lambda1, lambda2=lambda2, k=k, g=g, beta0=beta0, w0=w0)
+  res2 <- BIC_grid(res1$wloss, res1$beta, res1$w,k=k, g=g)
   fit <- list(beta = res2$beta,
               w = res2$w,
               lambda1 = lambda1,

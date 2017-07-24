@@ -11,28 +11,28 @@ typedef int bool;
 
 
 // get the Kth largest pos
-double  GetKLargest(int * rank, double * beta, int pos, int k, int m)
+double  GetKLargest(int * rank, double * beta, int pos, int k, int begin, int m)
 {
   //printf("m=%d pos=%d\n", m, pos);
   if(m==k)
     return 0;
-  if(fabs(beta[rank[k-1]]) > fabs(beta[pos]))
+  if(fabs(beta[rank[begin+k-1]]) > fabs(beta[pos]))
   {
     //printf("beta[rank[k-1]]=%f k=%d\n", beta[rank[k-1]], k);
-    return beta[rank[k-1]];
+    return beta[rank[begin+k-1]];
   }
 
   else 
-    return beta[rank[k]];
+    return beta[rank[begin+k]];
 }
 
 // maintain index
-void maintainRank(int * rank, double * beta, int pos,int m)
+void maintainRank(int * rank, double * beta, int pos,int begin, int m)
 {
   int status=0;
   int temp1=0, temp2=0;
   //printf("m=%d\n", m);
-  for(int i=0;i<m;i++)
+  for(int i=begin;i<begin+m;i++)
   {
     
     //printf("beta[%d]=%f, beta[%d]=%f \n", rank[i], fabs(beta[rank[i]]), pos, fabs(beta[pos]));
@@ -76,7 +76,7 @@ void maintainRank(int * rank, double * beta, int pos,int m)
     }
   }
 }
-
+/*
 void getRank(int * rank, double *beta,int m)
 {
   double * beta2=Calloc(m, double);
@@ -107,7 +107,7 @@ void getRank(int * rank, double *beta,int m)
   }
   Free(beta2);
 }
-
+*/
 //calculate the value of ||Xj'Y\n||
 double VectorProduct(double *x, double *y)
 {
@@ -159,7 +159,7 @@ double UpdateBeta(double z,double lambda,double c)
   }
 }
 
-SEXP CleanupG(double *r, double *betaPre, double *wPre, int* rank, double * shift, 
+SEXP CleanupG(double *r, double *betaPre, double *wPre, int* rank, int * ranks, double * shift, 
               double *c, double *Lam2, double *Lam1,
               SEXP beta_, SEXP w_, SEXP loss_, SEXP wloss_, SEXP iter_) 
 {
@@ -167,6 +167,7 @@ SEXP CleanupG(double *r, double *betaPre, double *wPre, int* rank, double * shif
   Free(betaPre);
   Free(wPre);
   Free(rank);
+  Free(ranks);
   Free(shift);
   Free(c);
   Free(Lam2);
@@ -198,6 +199,8 @@ SEXP rkan_GRID( SEXP X_, SEXP Y_, SEXP Lambda1_, SEXP Lambda2_, SEXP k_, SEXP g_
   double *beta0=REAL(Beta0_);
   double *w0=REAL(W0_);
   double *starBeta=NULL;
+  double *g=REAL(g_);
+  
   if(StarBeta_!=NULL)
   {
     starBeta=REAL(StarBeta_);
@@ -232,6 +235,7 @@ SEXP rkan_GRID( SEXP X_, SEXP Y_, SEXP Lambda1_, SEXP Lambda2_, SEXP k_, SEXP g_
   double * iter=REAL(iter_);
   
   int * rank=Calloc(m,int);
+  int * ranks=Calloc(L3*L2*L1*m, int);
   double *betaPre = Calloc(m, double);
   double *wPre=Calloc(n, double);
   double *r=Calloc(n, double);
@@ -314,7 +318,6 @@ SEXP rkan_GRID( SEXP X_, SEXP Y_, SEXP Lambda1_, SEXP Lambda2_, SEXP k_, SEXP g_
   }
   for (int l3=0; l3<L3;l3++)
   {
-    int kth=floor(k[l3]*m);
     //interation for each lambda2
     for(int l2=0;l2<L2;l2++)
     {
@@ -330,7 +333,6 @@ SEXP rkan_GRID( SEXP X_, SEXP Y_, SEXP Lambda1_, SEXP Lambda2_, SEXP k_, SEXP g_
         {
           Lam1[i]=lambda1[l1]/fabs(beta0[i]);
         }
-        
         /*if(intercept==true)
         {
         Lam1[0]=0;
@@ -354,48 +356,54 @@ SEXP rkan_GRID( SEXP X_, SEXP Y_, SEXP Lambda1_, SEXP Lambda2_, SEXP k_, SEXP g_
           }
           
           //iteration for each beta
-          for(int j=0;j<m;j++)
+          int end=-1,begin=0, kth=0;
+          for(int p=0;p<length(g_);p++)
           {
-            //(1)calculate zj 
-            double zj=0;
-            for(int i=0;i<n;i++)
+            begin=end+1;
+            end=end+g[p];
+            kth=floor(k[l3]*g[p]);
+            for(int j=begin;j<=end;j++)
             {
-              zj+=x[j*n+i]*wPre[i]*wPre[i]*r[i];
-            }
-            zj=zj/n+c[j]*betaPre[j];
-            
-            
-            //(2)update betaj
-            kl=GetKLargest(rank, betaPre, j, kth,m); 
-            //printf("k=%f klargest=%f \n",k[l3],kl);
-            beta[j*L3*L2*L1+l3*L1*L2+l2*L1+l1]=Kthreshold(zj, fabs(kl), Lam1[j], c[j]);
-            
-            //(3)update r
-            shift[j]=beta[j*L3*L2*L1+l3*L1*L2+l2*L1+l1]-betaPre[j];
-            betaPre[j]=beta[j*L3*L2*L1+l3*L1*L2+l2*L1+l1];
-            maintainRank(rank, betaPre, j,m);
-           // getRank(rank,betaPre,m);
-           /*
-            printf("print beta:");
-            for(int i=0;i<m;i++) //test
-            {
-              printf("%f ",betaPre[i]);
-            }
-            printf("\n");
-            printf("print rank:");
-            for(int i=0;i<m;i++) //test
-            {
-              printf("%d ",rank[i]);
-            }
-            printf("\n\n");*/
-            //break;
+              //(1)calculate zj 
+              double zj=0;
+              for(int i=0;i<n;i++)
+              {
+                zj+=x[j*n+i]*wPre[i]*wPre[i]*r[i];
+              }
+              zj=zj/n+c[j]*betaPre[j];
               
-            for(int i=0;i<n;i++)
-            {
-              r[i]-=x[j*n+i]*shift[j];
+              
+              //(2)update betaj
+              kl=GetKLargest(rank, betaPre, j, kth, begin, g[p]); 
+              //printf("j=%d,zj=%f,kl=%f,lam1j=%f,cj=%f,kth=%d,\n",j,zj,fabs(kl),Lam1[j],c[j],kth);
+              beta[j*L3*L2*L1+l3*L1*L2+l2*L1+l1]=Kthreshold(zj, fabs(kl), Lam1[j], c[j]);
+              
+              //(3)update r
+              shift[j]=beta[j*L3*L2*L1+l3*L1*L2+l2*L1+l1]-betaPre[j];
+              betaPre[j]=beta[j*L3*L2*L1+l3*L1*L2+l2*L1+l1];
+              maintainRank(rank, betaPre, j,begin,g[p]);
+              /*
+              printf("print beta:");
+              for(int i=0;i<m;i++) //test
+              {
+              printf("%f ",betaPre[i]);
+              }
+              printf("\n");
+              printf("print rank:");
+              for(int i=0;i<m;i++) //test
+              {
+              printf("%d ",rank[i]);
+              }
+              printf("\n\n");*/
+              //break;
+              
+              for(int i=0;i<n;i++)
+              {
+                r[i]-=x[j*n+i]*shift[j];
+              }
             }
           }
-          //break;
+         // break;
           
           //update w
           double sqr=0;
@@ -434,13 +442,17 @@ SEXP rkan_GRID( SEXP X_, SEXP Y_, SEXP Lambda1_, SEXP Lambda2_, SEXP k_, SEXP g_
           temp+=r[i]*wPre[i]*r[i]*wPre[i];
         }
         wloss[l3*L1*L2+l2*L1+l1]=temp;
+        for(int j=0;j<m;j++)
+        {
+          ranks[j*L3*L2*L1+l3*L1*L2+l2*L1+l1]=rank[j];
+        }
         
-      }//end iteration for each lambda1 fixed lambda1
+      }//end iteration for each lambda1
       for(int i=0;i<m;i++)
       {
         betaPre[i]=beta[i*L3*L2*L1+l3*L1*L2+l2*L1+0];
+        rank[i]=ranks[i*L3*L2*L1+l3*L1*L2+l2*L1+0];
       }
-      getRank(rank,betaPre,m);
       for(int i=0;i<n;i++)
       {
         wPre[i]=w[i*L3*L2*L1+l3*L1*L2+l2*L1+0];
@@ -459,8 +471,8 @@ SEXP rkan_GRID( SEXP X_, SEXP Y_, SEXP Lambda1_, SEXP Lambda2_, SEXP k_, SEXP g_
     for(int i=0;i<m;i++)
     {
       betaPre[i]=beta[i*L3*L2*L1+l3*L1*L2+0*L1+0];
+      rank[i]=ranks[i*L3*L2*L1+l3*L1*L2+0*L1+0];
     }
-    getRank(rank,betaPre,m);
     for(int i=0;i<n;i++)
     {
       wPre[i]=w[i*L3*L2*L1+l3*L1*L2+0*L1+0];
@@ -478,7 +490,7 @@ SEXP rkan_GRID( SEXP X_, SEXP Y_, SEXP Lambda1_, SEXP Lambda2_, SEXP k_, SEXP g_
  
   
   //clean and return
-  res_=CleanupG(r, betaPre, wPre, rank, shift, c, Lam2, Lam1,
+  res_=CleanupG(r, betaPre, wPre, rank, ranks, shift, c, Lam2, Lam1,
             beta_, w_, loss_, wloss_, iter_);          
   return res_;       
 }

@@ -10,7 +10,7 @@ rkan_grid <- function(x, y, lambda1, lambda2, k, g=p, delta=1e-10, maxIter=50, b
   L3 <- length(k)
   if(!is.null(g) & sum(g)!=p)
     stop("group info does not match x.")
-  res <- .Call("rkan_GRID", x, y, lambda1, lambda2, k, g, beta0, w0, delta, maxIter, 
+  res <- .Call("rkan_GRID", x, y, lambda1, lambda2, k, as.numeric(g), beta0, w0, delta, maxIter, 
                #ifelse(intercept, 1, 0), 
                startBeta = start.b, startW = start.w)
   res = list(beta = array(res[[1]], dim = c(L1,L2,L3, p)), w = array(res[[2]], dim = c(L1,L2,L3, n)), 
