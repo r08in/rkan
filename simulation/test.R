@@ -19,7 +19,7 @@ ptm <- proc.time()
 k <- 5/10
 beta0 <- rep(1,exam$p)
 w0 <- rep(0,exam$n)
-res <- rkan_grid(x=dout$x, y=dout$y, lambda1=1, lambda2=2,g=exam$g,k=k,beta0=beta0,w0=w0)
+res <- rkan_grid(x=dout$x, y=dout$y, lambda1=c(1,0.1), lambda2=2,g=exam$g,k=c(5/10,10/10),beta0=beta0,w0=w0)
 beta <- as.vector(res$beta)
 ifelse(abs(beta)<1e-7,0,beta)
 

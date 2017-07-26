@@ -64,3 +64,53 @@ getDf4kan <- function(beta, k, g){
   }
   return(df-cn)
 }
+
+rw <- function(x, y, nperb=50, res,...){
+  d <- dim(res$beta)
+  L1 <- d[1]
+  L2 <- d[2]
+  L3 <- d[3]
+  ka <- array(0,dim=c(L1,L2,L3))
+  n <- dim(x)[1]
+  for(i in 1: nperb){
+    v1 <- rexp(n)
+    v2 <- rexp(n)
+    res1 <- rkan_grid(x*v1,y*v1,...)
+    res2 <- rkan_grid(x*v2,y*v2,...)
+    for(l1 in 1:L1){
+      for(l2 in 1: L2){
+        for(l3 in 1: L3)
+        {
+          #compute kappa for each pair of pertubtated data
+          r1 <- c(ifelse(abs(res1$beta[l1, l2, l3,])<1e-7, 0, 1), ifelse(res1$w[l1, l2, l3,]==1, 0 , 1))
+          r2 <- c(ifelse(abs(res2$beta[l1, l2, l3,])<1e-7, 0, 1), ifelse(res2$w[l1, l2, l3,]==1, 0 , 1))
+          ka[l1, l2, l3] <- ka[l1, l2, l3] + computeKappa(r1, r2)
+        }
+      }
+    }
+  }
+  ka <- ka/nperb
+  # 
+  index <- which(ka==max(ka))
+  index <- index[ceiling(length(index)/2)]
+  l3 <- ceiling(index/(L1*L2))
+  l2 <- ceiling((index-(l3-1)*(L1*L2))/L1)
+  l1 <- index-(l3-1)*(L1*L2)-(l2-1)*L1
+  #
+  list(beta = res$beta[l1, l2, l3,], 
+         w = res$w[l1, l2, l3,], index=c(l1,l2,l3), ka=ka) 
+
+}
+
+computeKappa <- function(r1, r2){
+  k <- length(r1)
+  p0 <- sum(r1==r2)/k
+  pe <- sum(r1==1)*sum(r2==1)/k^2+sum(r1==0)*sum(r2==0)/k^2
+  if(pe==1){
+    return(0)
+  } else{
+    return((p0-pe)/(1-pe))
+  }
+   
+  
+}

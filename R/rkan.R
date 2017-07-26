@@ -1,7 +1,7 @@
 #' @export
 rkan <- function(x, y, nlambda1 = 20, nlambda2 = 20, nk=p,lambda1 = NULL, lambda2 = NULL, k=NULL, g=p,
                  lambda1.min=0.05, lambda2.min=0.001, beta0 = NULL, w0 = NULL, 
-                 initial = c("uniform","rkan"), intercept = TRUE, standardize = TRUE){
+                 initial = c("uniform","rkan"), intercept = TRUE, standardize = TRUE, crit=c("KAPPA")){
   n = length(y)
   p = dim(x)[2]
   ## check error
@@ -19,6 +19,7 @@ rkan <- function(x, y, nlambda1 = 20, nlambda2 = 20, nk=p,lambda1 = NULL, lambda
     stop("Missing data (NA's) detected.Take actions to eliminate missing data before passing 
          X and y to pawls.")
   initial <- match.arg(initial)
+  crit <- match.arg(crit)
   
   if (!is.null(lambda1)) 
     nlambda1 <- length(lambda1)
@@ -66,22 +67,38 @@ rkan <- function(x, y, nlambda1 = 20, nlambda2 = 20, nk=p,lambda1 = NULL, lambda
   
   ## Fit 
   res1 <- rkan_grid(x=XX, y=yy, lambda1=lambda1, lambda2=lambda2, k=k, g=g, beta0=beta0, w0=w0)
-  res2 <- BIC_grid(res1$wloss, res1$beta, res1$w,k=k, g=g)
-  fit <- list(beta = res2$beta,
-              w = res2$w,
-              lambda1 = lambda1,
-              lambda2 = lambda2,
-              k = k,
-              opt.lambda1 = lambda1[res2$index[1]],
-              opt.lambda2 = lambda2[res2$index[2]],
-              opt.k =k[res2$index[3]],
-              iter = res1$iter,
-              ws = res1$w,
-              betas = res1$betas,
-              raw.bic = res2$raw.bic,
-              bic = res2$bic,
-              how=res1$how,
-              counter=res1$counter)
+  if(crit=="BIC"){
+    res2 <- BIC_grid(res1$wloss, res1$beta, res1$w,k=k, g=g)
+    fit <- list(beta = res2$beta,
+                w = res2$w,
+                lambda1 = lambda1,
+                lambda2 = lambda2,
+                k = k,
+                opt.lambda1 = lambda1[res2$index[1]],
+                opt.lambda2 = lambda2[res2$index[2]],
+                opt.k =k[res2$index[3]],
+                iter = res1$iter,
+                ws = res1$w,
+                betas = res1$betas,
+                raw.bic = res2$raw.bic,
+                bic = res2$bic)
+  } else if(crit=="KAPPA"){
+    res2 <- rw(x=XX, y=yy, res=res1, lambda1=lambda1, lambda2=lambda2, k=k, g=g, beta0=beta0, w0=w0 )
+    fit <- list(beta = res2$beta,
+                w = res2$w,
+                lambda1 = lambda1,
+                lambda2 = lambda2,
+                k = k,
+                opt.lambda1 = lambda1[res2$index[1]],
+                opt.lambda2 = lambda2[res2$index[2]],
+                opt.k =k[res2$index[3]],
+                iter = res1$iter,
+                ws = res1$w,
+                betas = res1$betas,
+                ka = res2$ka)
+  }
+  
+  
   
   ## unstandardize
   if (standardize) {
