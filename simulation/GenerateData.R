@@ -156,3 +156,19 @@ GenerateDataByModel = function(n, beta, model = c("A", "B", "C", "D", "E"), pro 
     }
     return(out)
 }
+
+
+GenerateDataFile <- function(L, n, beta = NULL, model = c("A", "B", "C", "D","E"), g=p, pro=0.1, 
+                             da=0.8, db=0.5){
+  p <- length(beta)
+  mcount <- length(model)
+  for (j in 1:mcount) {
+    dfile <- paste("data\\", model[j], n, "X", p,"_",length(g),"_",da,"X",db,"_", pro, ".rda", sep = "")
+    data=NULL
+    for (i in 1:L) {
+      out = GenerateDataByModel(n = n, beta = beta, model = model[j], pro=pro, g=g, a=da, b=db)
+      data = c(data, list(out))
+    }
+    save(data, file = dfile)
+  }
+}

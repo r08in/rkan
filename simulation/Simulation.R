@@ -2,11 +2,10 @@ source("Simulation/GenerateData.R")
 
 
 simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), g=p, pro=0.1, 
-                      da=0.5, db=0.5, 
+                      da=0.8, db=0.5, 
                       useDataFile = FALSE,seed=2017,
-                      method = "rkan", standardize = TRUE, intercept = FALSE, 
-                      lambda1=NULL, lambda2=NULL,
-                      ...) {
+                      method = "rkan", ...) {
+    intercept=FALSE
     mcount <- length(model)
     
     # define output
@@ -22,8 +21,8 @@ simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), g=p, pro
     mses <- rep(0, L)
     times <- rep(0, L)
     nres <- array(list(), mcount)
-    nlambda2 <- ifelse(is.null(lambda2),20,length(lambda2))
-    nlambda1 <- ifelse(is.null(lambda1),20,length(lambda1))
+    nlambda2 <- ifelse(is.null(list(...)$lambda2),20,length(list(...)$lambda2))
+    nlambda1 <- ifelse(is.null(list(...)$lambda1),20,length(list(...)$lambda1))
     crit2 <- matrix(0,nrow=L,ncol=nlambda2)
     crit1 <- matrix(0,nrow=L,ncol=nlambda1)
     wdf <- array(0,dim=c(L,nlambda2,nlambda1))
@@ -32,6 +31,8 @@ simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), g=p, pro
     bic2 <- array(0,dim=c(L,nlambda2,nlambda1))
     lam2 <- crit2
     lam1 <- crit1
+    ks <- NULL
+    opt.param <- matrix(0,nrow=L,ncol=3)
     dfw <- rep(0,L)
     dfb <- rep(0,L)
     
@@ -47,12 +48,12 @@ simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), g=p, pro
         }
         p <- length(beta)
         if (useDataFile) {
-            f = paste("data\\", model[j], n, "X", p, "_", pro, ".rda", sep = "")
+            f = paste("data\\", model[j], n, "X", p,"_",length(g),"_",da,"X",db,"_", pro, ".rda", sep = "")
             load(f)
             beta = data[[1]]$beta
             n = length(data[[1]]$y)
         }
-        b = array(0, dim = c(L, ifelse(intercept,p+1,p)))
+        b = array(0, dim = c(L, ifelse(FALSE,p+1,p)))
         w = array(0, dim = c(L, n))
         gam = array(0, dim = c(L, n))
         # ROC
@@ -69,15 +70,66 @@ simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), g=p, pro
             # try different methods
             if (method == "rkan") {
               ptm <- proc.time()
-              res = rkan(x=out$x, y=out$y,lambda1=lambda1, lambda2=lambda2, nlambda1=nlambda1, nlambda2=nlambda2, ...)
+              res = rkan(x=out$x, y=out$y, ...)
               times[i] <- (proc.time() - ptm)[1]
               b[i, ] = ifelse(abs(res$beta) >zero, res$beta, 0)
               w[i, ] = res$w
               lam2[i,] =  res$lambda2
               lam1[i,] = res$lambda1
+              if(is.null(ks)) ks <- matrix(0,nrow=L,ncol=length(res$k)) 
+              ks[i,] <- res$k
+              opt.param[i,] <- c(res$opt.lambda1,res$opt.lambda2,res$opt.k)
               iter=res$iter
-            } 
-            
+            }else if (method == "rgkan") {
+              ptm <- proc.time()
+              res = rkan(x=out$x, y=out$y, g=g, ...)
+              times[i] <- (proc.time() - ptm)[1]
+              b[i, ] = ifelse(abs(res$beta) >zero, res$beta, 0)
+              w[i, ] = res$w
+              lam2[i,] =  res$lambda2
+              lam1[i,] = res$lambda1
+              if(is.null(ks)) ks <- matrix(0,nrow=L,ncol=length(res$k)) 
+              ks[i,] <- res$k
+              opt.param[i,] <- c(res$opt.lambda1,res$opt.lambda2,res$opt.k)
+              iter=res$iter
+            }else if (method == "gkan") {
+              ptm <- proc.time()
+              res = rkan(x=out$x, y=out$y, lambda2=100,g=g, ...)
+              times[i] <- (proc.time() - ptm)[1]
+              b[i, ] = ifelse(abs(res$beta) >zero, res$beta, 0)
+              w[i, ] = res$w
+              lam2[i,] =  res$lambda2
+              lam1[i,] = res$lambda1
+              if(is.null(ks)) ks <- matrix(0,nrow=L,ncol=length(res$k)) 
+              ks[i,] <- res$k
+              opt.param[i,] <- c(res$opt.lambda1,res$opt.lambda2,res$opt.k)
+              iter=res$iter
+            }else if (method == "kan") {
+              ptm <- proc.time()
+              res = rkan(x=out$x, y=out$y, lambda2=100, ...)
+              times[i] <- (proc.time() - ptm)[1]
+              b[i, ] = ifelse(abs(res$beta) >zero, res$beta, 0)
+              w[i, ] = res$w
+              lam2[i,] =  res$lambda2
+              lam1[i,] = res$lambda1
+              if(is.null(ks)) ks <- matrix(0,nrow=L,ncol=length(res$k)) 
+              ks[i,] <- res$k
+              opt.param[i,] <- c(res$opt.lambda1,res$opt.lambda2,res$opt.k)
+              iter=res$iter
+            }else if (method == "pawls") {
+              ptm <- proc.time()
+              res = pawls(x=out$x, y=out$y, intercept = intercept,...)
+              times[i] <- (proc.time() - ptm)[1]
+              b[i, ] = ifelse(abs(res$beta) >zero, res$beta, 0)
+              w[i, ] = res$w
+              if(length(lam2[i,]!=length(res$lamabda2))){
+                lam2=matrix(0,nrow=L,ncol=length(res$lamabda2))
+                lam1=matrix(0,nrow=L,ncol=length(res$lamabda1))
+              }
+              lam2[i,] =  res$lambda2
+              lam1[i,] = res$lambda1
+              iter=res$iter
+            }  
             # record result
 
             if(intercept) res$beta <- res$beta[-1]
@@ -107,7 +159,7 @@ simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), g=p, pro
         TIME <- sum(times)
         # outlier dectection
         OD <- "not applicable."
-        if(method == "rkan"  ){
+        if(method == "rkan"|| method=="rgkan" || method=="pawls"  ){
           if(model[j] == "A" || model[j] == "B"){
             curPro <- 0
           }
@@ -121,10 +173,10 @@ simulation = function(L, n, beta = NULL, model = c("A", "B", "C", "D"), g=p, pro
         }
        
         # BIC curve
-        if(method=="rkan"){
+        if(method=="rkan"||method=="rgkan"){
           nres[[j]] <- list(model = model[j], CFR = CFR, CFR2 = CFR2, OFR = OFR, PDR = PDR, FDR = FDR, 
                             AN = AN, MSE = MSE, mses=mses, TIME = TIME,iter=iter,OD=OD,
-                            lam2=lam2,lam1=lam1,betas=b,ws=w)
+                            lam2=lam2,lam1=lam1,ks=ks,opt.param=opt.param,betas=b,ws=w)
         } else{
           nres[[j]] <- list(model = model[j], CFR = CFR, CFR2 = CFR2, OFR = OFR, PDR = PDR, FDR = FDR, 
                             AN = AN, MSE = MSE, mses=mses, TIME = TIME, iw=iw, ib=ib,OD=OD)

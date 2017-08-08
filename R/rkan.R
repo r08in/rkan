@@ -1,7 +1,7 @@
 #' @export
-rkan <- function(x, y, nlambda1 = 20, nlambda2 = 20, nk=p,lambda1 = NULL, lambda2 = NULL, k=NULL, g=p,
+rkan <- function(x, y, nlambda1 = 20, nlambda2 = 20, nk=6,lambda1 = NULL, lambda2 = NULL, k=NULL, g=p,
                  lambda1.min=0.05, lambda2.min=0.001, beta0 = NULL, w0 = NULL, 
-                 initial = c("uniform","rkan"), intercept = TRUE, standardize = TRUE, crit=c("KAPPA")){
+                 initial = c("uniform","rkan"), intercept = TRUE, standardize = TRUE, crit=c("KAPPA","BIC")){
   n = length(y)
   p = dim(x)[2]
   ## check error
@@ -54,9 +54,10 @@ rkan <- function(x, y, nlambda1 = 20, nlambda2 = 20, nk=p,lambda1 = NULL, lambda
   }
   
   ## set tunning parameter
+  nk <- ifelse(nk > max(g), max(g), nk)
   if (is.null(lambda1)||is.null(lambda2)||is.null(k)) {
     param <- set_parameter(x=XX, y=yy, nlambda1=nlambda1, nlambda2=nlambda2, nk=nk,
-                             lambda1.min=lambda1.min, lambda2.min=lambda2.min, beta0=beta0, w0=w0)
+                             lambda1.min=lambda1.min, lambda2.min=lambda2.min, k.min=1/max(g),beta0=beta0, w0=w0)
     if (is.null(lambda1)) 
       lambda1 <- param$lambda1
     if (is.null(lambda2)) 

@@ -23,7 +23,8 @@ BIC_grid = function(wloss, beta, w, k, g) {
       for(q in 1 : l3){
         wdf[i, j, q] <- sum(w[i, j, q,]!=1)
         #bdf[i, j, q] <- getDf4kan(beta[i,j,q,],k[q],g)
-        bdf[i, j, q] <- sum(abs(beta[i,j,q,])>1e-7)
+        #bdf[i, j, q] <- sum(abs(beta[i,j,q,])>1e-7)
+        bdf[i, j, q] <-length(unique(abs(beta[i,j,q,abs(beta[i,j,q,])>1e-7])))
         bicTemp[i, j, q] <- log(wloss[i, j, q]/(n)) + (bdf[i, j, q] + wdf[i, j, q]) * log(n)/(n)
         if(wdf[i, j, q] >= n * pro || bdf[i, j, q] + wdf[i, j, q] >= n){
           bicTemp2[i, j, q] <- BIC.max
